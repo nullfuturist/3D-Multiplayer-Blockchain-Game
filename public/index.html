@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phantom 3D World</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui">
+            <button id="connectWallet">Connect Phantom Wallet</button>
+            <div id="walletInfo" class="hidden" style="display:none;">
+                <div><strong>Connected:</strong> <span id="publicKey"></span></div>
+                <div><strong>Players online:</strong> <span id="userCount">0</span></div>
+                <div><strong>Mode:</strong> <span id="gameMode">World</span></div>
+                <div><strong>Position:</strong> <span id="position">0, 0</span></div>
+            </div>
+        </div>
+        
+        <div id="worldView">
+            <!-- World map content will be added here -->
+        </div>
+        
+        <div id="plotView" class="hidden">
+            <canvas id="plotCanvas"></canvas>
+            <div id="crosshair"></div>
+            <div id="plotInfo">
+                <div>Height: <span id="heightInfo">1.7</span>m</div>
+                <div>Objects: <span id="objectCount">1</span></div>
+                <div>Players: <span id="plotPlayerCount">1</span></div>
+            </div>
+        </div>
+        
+        <div id="debugInfo" class="hidden">
+            <div>Plot: <span id="currentPlotId">-</span></div>
+            <div>Players in plot: <span id="debugPlayers">0</span></div>
+            <div>Objects synced: <span id="debugObjects">0</span></div>
+        </div>
+<div id="nftUI" class="hidden">
+    <div id="nftPanel">
+        <h3>NFT Inventory</h3>
+        <div id="nftInput">
+            <input type="text" id="nftPubkeyInput" placeholder="Enter NFT Public Key" />
+            <button id="addNFTBtn">Add NFT</button>
+        </div>
+        <div id="nftStatus"></div>
+        <div id="nftInventory"></div>
+        <div id="nftControls">
+            <div>Press 1-9 to place selected NFT model</div>
+            <div>Selected: <span id="selectedNFT">None</span></div>
+        </div>
+    </div>
+</div>        
+        <!-- Hidden canvas for thumbnail generation -->
+        <canvas id="thumbnailCanvas" width="100" height="100"></canvas>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+const v = Date.now();
+document.write(`<script src="game.js?v=${v}"><\/script>`);
+document.write(`<script src="world.js?v=${v}"><\/script>`);
+document.write(`<script src="plot.js?v=${v}"><\/script>`);
+document.write(`<script src="player.js?v=${v}"><\/script>`);
+document.write(`<script src="controls.js?v=${v}"><\/script>`);
+document.write(`<script src="nft-renderer.js?v=${v}"><\/script>`);
+document.write(`<script src="main.js?v=${v}"><\/script>`);
+</script>
+
+
+
+</body>
+</html>

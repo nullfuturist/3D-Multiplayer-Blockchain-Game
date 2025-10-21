@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Editor & NFT Minter</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            background: #222; 
+            color: #fff; 
+            font-family: monospace; 
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #555;
+            padding-bottom: 15px;
+        }
+        
+        .header h1 {
+            color: #4CAF50;
+            margin: 0;
+        }
+        
+        .header p {
+            color: #ccc;
+            margin: 5px 0 0 0;
+        }
+        
+        canvas { 
+            border: 1px solid #444; 
+            display: block; 
+            margin: 20px auto; 
+            cursor: grab;
+        }
+        
+        canvas:active {
+            cursor: grabbing;
+        }
+        
+        .info { 
+            font-size: 12px; 
+            line-height: 1.4; 
+            margin-bottom: 10px; 
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .controls { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 10px; 
+            align-items: center; 
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .controls input, .controls select, .controls button { 
+            background: #333; 
+            color: #fff; 
+            border: 1px solid #555; 
+            padding: 8px 12px; 
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .controls button { 
+            cursor: pointer; 
+            transition: background 0.2s;
+        }
+        
+        .controls button:hover { 
+            background: #444; 
+        }
+        
+        .controls button.primary {
+            background: #4CAF50;
+        }
+        
+        .controls button.primary:hover {
+            background: #45a049;
+        }
+        
+        .controls button.danger {
+            background: #f44336;
+        }
+        
+        .controls button.danger:hover {
+            background: #d32f2f;
+        }
+        
+        #modelList { 
+            max-height: 200px; 
+            overflow-y: auto; 
+            background: #333; 
+            border: 1px solid #555; 
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .model-item { 
+            padding: 8px; 
+            cursor: pointer; 
+            border-bottom: 1px solid #555; 
+            transition: background 0.2s;
+        }
+        
+        .model-item:hover { 
+            background: #444; 
+        }
+        
+        .model-item:last-child {
+            border-bottom: none;
+        }
+        
+        .hidden { 
+            display: none; 
+        }
+        
+        #imageResult, #nftResult { 
+            margin-top: 15px; 
+            padding: 15px; 
+            background: #333; 
+            border: 1px solid #555; 
+            border-radius: 5px;
+            word-break: break-all; 
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        #imageResult a, #nftResult a { 
+            color: #4CAF50; 
+            text-decoration: none;
+        }
+        
+        #imageResult a:hover, #nftResult a:hover {
+            text-decoration: underline;
+        }
+
+        #nftLoadPanel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: #222;
+            border: 2px solid #555;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            padding: 20px;
+            min-width: 400px;
+        }
+
+        #nftPubkey {
+            font-family: monospace;
+            font-size: 12px;
+            width: 300px;
+        }
+        
+        .help-text {
+            background: #444;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+        
+        .help-text h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+        
+        .status-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        
+        .status-success {
+            background: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+        
+        .status-error {
+            background: #c62828;
+            border: 1px solid #f44336;
+        }
+        
+        .status-info {
+            background: #1565c0;
+            border: 1px solid #2196f3;
+        }
+        
+        .nav-link {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .nav-link:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="nav-link">← Back to World</a>
+    
+    <div class="header">
+        <h1>3D Model Editor & NFT Minter</h1>
+        <p>Create, edit, and mint 3D models as NFTs</p>
+    </div>
+    
+    <div class="controls">
+        <input type="text" id="modelName" placeholder="Model name" style="width: 150px;">
+        <button onclick="saveModel()" class="primary">Save</button>
+        <button onclick="loadModels()">Load</button>
+        <button onclick="showLoadNFTDialog()">Load NFT</button>
+        <button onclick="clearModel()" class="danger">Clear</button>
+    </div>
+    
+    <div class="controls">
+        <button onclick="captureAndUpload()" class="primary">Capture & Upload</button>
+        <button onclick="mintNFT()" class="primary">Mint NFT</button>
+        <button onclick="exportModel()">Export JSON</button>
+    </div>
+    
+    <div id="loadPanel" class="hidden">
+        <h3>Load Existing Model:</h3>
+        <div id="modelList"></div>
+        <button onclick="hideLoadPanel()">Close</button>
+    </div>
+
+    <div id="nftLoadPanel" class="hidden">
+        <h3>Load 3D Model from NFT</h3>
+        <p>Enter the public key of an NFT that contains 3D model data:</p>
+        <div style="margin: 15px 0;">
+            <input type="text" id="nftPubkey" placeholder="Enter NFT public key">
+            <button onclick="loadFromNFT()" class="primary" style="margin-left: 10px;">Load</button>
+        </div>
+        <button onclick="hideNFTLoadPanel()">Cancel</button>
+        <div id="nftLoadStatus" style="margin-top: 15px; font-size: 12px;"></div>
+    </div>
+    
+    <div class="info">
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+            <div>Primary: <span id="primary">none</span> | Secondary: <span id="secondary">none</span></div>
+            <div>Vertices: <span id="vertexCount">1</span> | Edges: <span id="edgeCount">0</span></div>
+        </div>
+        <div style="margin-top: 10px;">
+            Color: <input type="color" id="colorInput" value="#cccccc" style="width: 60px;">
+        </div>
+    </div>
+    
+    <canvas id="canvas" width="800" height="600"></canvas>
+    
+    <div class="help-text">
+        <h3>Controls:</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+                <strong>Vertices:</strong><br>
+                N: Add new vertex<br>
+                Z/X: Select primary vertex<br>
+                C/V: Select secondary vertex
+            </div>
+            <div>
+                <strong>Movement:</strong><br>
+                WASD: Move X/Z axes<br>
+                Q/E: Move Z axis<br>
+                ↑/↓: Change size
+            </div>
+        </div>
+        <div style="margin-top: 10px;">
+            <strong>Edges:</strong> T: Toggle edge between primary and secondary vertices<br>
+            <strong>Camera:</strong> Mouse drag to rotate view, scroll wheel to zoom
+        </div>
+    </div>
+    
+    <div id="imageResult" class="hidden"></div>
+    <div id="nftResult" class="hidden"></div>
+
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script>
+        // Global variables
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+        
+        // Shader sources
+        const vs = `
+            attribute vec3 position, normal, vertexColor;
+            uniform mat4 modelMatrix, viewMatrix, projectionMatrix;
+            uniform vec3 color;
+            uniform bool useVertexColors;
+            varying vec3 vColor, vNormal;
+            void main() {
+                gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+                vColor = useVertexColors ? vertexColor : color;
+                vNormal = normal;
+            }
+        `;
+        
+        const fs = `
+            precision mediump float;
+            varying vec3 vColor, vNormal;
+            void main() {
+                float light = max(0.3, dot(normalize(vNormal), normalize(vec3(1,1,1))));
+                gl_FragColor = vec4(vColor * light, 1.0);
+            }
+        `;
+        
+        // Initialize WebGL
+        function createShader(type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+                return null;
+            }
+            return shader;
+        }
+        
+        const program = gl.createProgram();
+        gl.attachShader(program, createShader(gl.VERTEX_SHADER, vs));
+        gl.attachShader(program, createShader(gl.FRAGMENT_SHADER, fs));
+        gl.linkProgram(program);
+        
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error('Program link error:', gl.getProgramInfoLog(program));
+        }
+        
+        gl.useProgram(program);
+
+        const locs = {
+            model: gl.getUniformLocation(program, 'modelMatrix'),
+            view: gl.getUniformLocation(program, 'viewMatrix'),
+            proj: gl.getUniformLocation(program, 'projectionMatrix'),
+            color: gl.getUniformLocation(program, 'color'),
+            useVC: gl.getUniformLocation(program, 'useVertexColors'),
+            pos: gl.getAttribLocation(program, 'position'),
+            norm: gl.getAttribLocation(program, 'normal'),
+            vColor: gl.getAttribLocation(program, 'vertexColor')
+        };
+
+        const bufs = {
+            v: gl.createBuffer(), 
+            n: gl.createBuffer(), 
+            c: gl.createBuffer(), 
+            i: gl.createBuffer()
+        };
+
+        // Model data
+        let vertices = [{pos:[0,0,0], size:1, color:[0.8,0.8,0.8]}];
+        let edges = new Set();
+        let primary = -1;
+        let secondary = -1;
+        let currentModelId = null;
+        
+        // Camera controls
+        let camera = {
+            distance: 8,
+            rotationX: 0.5,
+            rotationY: 0.5
+        };
+        
+        let mouseDown = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        // Math utilities
+        function cross(a, b) { 
+            return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; 
+        }
+        
+        function dot(a, b) { 
+            return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; 
+        }
+        
+        function norm(v) { 
+            const l = Math.sqrt(dot(v,v)); 
+            return l > 0 ? v.map(x => x/l) : [0,0,0]; 
+        }
+        
+        function perspective(fov, aspect, near, far) {
+            const f = 1/Math.tan(fov/2), nf = 1/(near-far);
+            return [f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)*nf,-1, 0,0,2*far*near*nf,0];
+        }
+        
+        function lookAt(eye, center, up) {
+            const z = norm([eye[0]-center[0], eye[1]-center[1], eye[2]-center[2]]);
+            const x = norm(cross(up, z));
+            const y = cross(z, x);
+            return [x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -dot(x,eye),-dot(y,eye),-dot(z,eye),1];
+        }
+
+        function isConnected(i) { 
+            return [...edges].some(e => e.split('-').map(Number).includes(i)); 
+        }
+        
+        function hexToRgb(hex) {
+            const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return r ? r.slice(1).map(x => parseInt(x,16)/255) : [0.8,0.8,0.8];
+        }
+        
+        function rgbToHex(r,g,b) { 
+            return "#" + ((1<<24) + (Math.round(r*255)<<16) + (Math.round(g*255)<<8) + Math.round(b*255)).toString(16).slice(1); 
+        }
+
+        // Geometry generation
+        function genSphere(center, size) {
+            const verts = [center[0], center[1], center[2]];
+            const norms = [0,1,0];
+            const indices = [];
+            const r = size * 0.02;
+            for (let i = 0; i < 8; i++) {
+                const a = (i/8) * Math.PI * 2;
+                verts.push(center[0] + r*Math.cos(a), center[1], center[2] + r*Math.sin(a));
+                norms.push(0,1,0);
+                indices.push(0, i+1, ((i+1)%8)+1);
+            }
+            return {vertices: verts, normals: norms, indices};
+        }
+
+        function genPrism(start, end, startSize, endSize, startColor, endColor) {
+            const dir = [end[0]-start[0], end[1]-start[1], end[2]-start[2]];
+            const len = Math.sqrt(dot(dir,dir));
+            if (len < 0.001) return {vertices:[], normals:[], colors:[], indices:[]};
+            
+            const fwd = dir.map(x => x/len);
+            const right = norm(cross(fwd, Math.abs(fwd[1]) < 0.9 ? [0,1,0] : [1,0,0]));
+            const up = cross(fwd, right);
+            
+            const verts = [], norms = [], colors = [], indices = [];
+            const sides = 6;
+            
+            for (let i = 0; i <= sides; i++) {
+                const a = (i/sides) * Math.PI * 2;
+                const c = Math.cos(a), s = Math.sin(a);
+                
+                [start, end].forEach((pos, j) => {
+                    const radius = (j ? endSize : startSize) * 0.1;
+                    const color = j ? endColor : startColor;
+                    verts.push(
+                        pos[0] + (right[0]*c + up[0]*s)*radius, 
+                        pos[1] + (right[1]*c + up[1]*s)*radius, 
+                        pos[2] + (right[2]*c + up[2]*s)*radius
+                    );
+                    norms.push(...norm([right[0]*c + up[0]*s, right[1]*c + up[1]*s, right[2]*c + up[2]*s]));
+                    colors.push(...color);
+                });
+            }
+            
+            for (let i = 0; i < sides; i++) {
+                const i0 = i*2, i1 = i0+1, i2 = ((i+1)%sides)*2, i3 = i2+1;
+                indices.push(i0,i1,i2, i1,i3,i2);
+            }
+            
+            return {vertices: verts, normals: norms, colors, indices};
+        }
+
+        function render(geo, color, useVC = false) {
+            if (!geo.vertices.length) return;
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, bufs.v);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geo.vertices), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(locs.pos);
+            gl.vertexAttribPointer(locs.pos, 3, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, bufs.n);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geo.normals), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(locs.norm);
+            gl.vertexAttribPointer(locs.norm, 3, gl.FLOAT, false, 0, 0);
+
+            if (useVC && geo.colors) {
+                gl.bindBuffer(gl.ARRAY_BUFFER, bufs.c);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geo.colors), gl.STATIC_DRAW);
+                gl.enableVertexAttribArray(locs.vColor);
+                gl.vertexAttribPointer(locs.vColor, 3, gl.FLOAT, false, 0, 0);
+                gl.uniform1i(locs.useVC, 1);
+            } else {
+                gl.disableVertexAttribArray(locs.vColor);
+                gl.uniform1i(locs.useVC, 0);
+                gl.uniform3fv(locs.color, color);
+            }
+
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufs.i);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(geo.indices), gl.STATIC_DRAW);
+            gl.drawElements(gl.TRIANGLES, geo.indices.length, gl.UNSIGNED_SHORT, 0);
+        }
+
+        function draw() {
+            gl.viewport(0, 0, 800, 600);
+            gl.clearColor(0.1, 0.1, 0.1, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.enable(gl.DEPTH_TEST);
+
+            // Calculate camera position
+            const eye = [
+                camera.distance * Math.cos(camera.rotationX) * Math.sin(camera.rotationY),
+                camera.distance * Math.sin(camera.rotationX),
+                camera.distance * Math.cos(camera.rotationX) * Math.cos(camera.rotationY)
+            ];
+
+            gl.uniformMatrix4fv(locs.proj, false, perspective(Math.PI/4, 800/600, 0.1, 100));
+            gl.uniformMatrix4fv(locs.view, false, lookAt(eye, [0,0,0], [0,1,0]));
+            gl.uniformMatrix4fv(locs.model, false, [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+
+            // Draw edges
+            edges.forEach(edgeKey => {
+                const [i,j] = edgeKey.split('-').map(Number);
+                if (i >= vertices.length || j >= vertices.length) return;
+                render(genPrism(vertices[i].pos, vertices[j].pos, vertices[i].size, vertices[j].size, vertices[i].color, vertices[j].color), null, true);
+            });
+
+            // Draw vertices
+            gl.disable(gl.DEPTH_TEST);
+            vertices.forEach((v, i) => {
+                const connected = isConnected(i);
+                const selected = i === primary || i === secondary;
+                if (!connected || selected) {
+                    const color = i === primary ? [1,0,0] : i === secondary ? [0,0,1] : [0.7,0.7,0.7];
+                    render(genSphere(v.pos, v.size*2), color);
+                }
+            });
+            gl.enable(gl.DEPTH_TEST);
+
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('primary').textContent = primary >= 0 ? primary : 'none';
+            document.getElementById('secondary').textContent = secondary >= 0 ? secondary : 'none';
+            document.getElementById('vertexCount').textContent = vertices.length;
+            document.getElementById('edgeCount').textContent = edges.size;
+            
+            const ci = document.getElementById('colorInput');
+            if (document.activeElement !== ci && primary >= 0) {
+                ci.value = rgbToHex(...vertices[primary].color);
+            }
+        }
+
+        // Event handlers
+        canvas.addEventListener('mousedown', (e) => {
+            mouseDown = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (mouseDown) {
+                const deltaX = e.clientX - lastMouseX;
+                const deltaY = e.clientY - lastMouseY;
+                
+                camera.rotationY += deltaX * 0.01;
+                camera.rotationX += deltaY * 0.01;
+                
+                camera.rotationX = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, camera.rotationX));
+                
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                
+                draw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            mouseDown = false;
+            canvas.style.cursor = 'grab';
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            camera.distance += e.deltaY * 0.01;
+            camera.distance = Math.max(2, Math.min(20, camera.distance));
+            draw();
+            e.preventDefault();
+        });
+
+        document.addEventListener('keydown', e => {
+            if (document.activeElement.type === 'text' || document.activeElement.type === 'color') return;
+            
+            const move = 0.2, size = 0.1;
+            let changed = false;
+            
+            switch(e.key.toLowerCase()) {
+                case 'n': 
+                    vertices.push({pos:[0,0,0], size:1, color:[0.8,0.8,0.8]}); 
+                    changed = true;
+                    break;
+                case 't': 
+                    if (primary >= 0 && secondary >= 0) {
+                        const key = `${Math.min(primary,secondary)}-${Math.max(primary,secondary)}`;
+                        edges.has(key) ? edges.delete(key) : edges.add(key);
+                        changed = true;
+                    }
+                    break;
+                case 'z': primary = primary <= 0 ? vertices.length-1 : primary-1; changed = true; break;
+                case 'x': primary = primary >= 0 && primary < vertices.length-1 ? primary+1 : -1; changed = true; break;
+                case 'c': secondary = secondary <= 0 ? vertices.length-1 : secondary-1; changed = true; break;
+                case 'v': secondary = secondary >= 0 && secondary < vertices.length-1 ? secondary+1 : -1; changed = true; break;
+                case 'w': if (primary >= 0) { vertices[primary].pos[1] += move; changed = true; } break;
+                case 's': if (primary >= 0) { vertices[primary].pos[1] -= move; changed = true; } break;
+                case 'a': if (primary >= 0) { vertices[primary].pos[0] -= move; changed = true; } break;
+                case 'd': if (primary >= 0) { vertices[primary].pos[0] += move; changed = true; } break;
+                case 'q': if (primary >= 0) { vertices[primary].pos[2] -= move; changed = true; } break;
+                case 'e': if (primary >= 0) { vertices[primary].pos[2] += move; changed = true; } break;
+                case 'arrowup': 
+                    if (primary >= 0) { 
+                        vertices[primary].size += size; 
+                        changed = true;
+                        e.preventDefault(); 
+                    } 
+                    break;
+                case 'arrowdown': 
+                    if (primary >= 0) { 
+                        vertices[primary].size = Math.max(0.1, vertices[primary].size-size); 
+                        changed = true;
+                        e.preventDefault(); 
+                    } 
+                    break;
+            }
+            
+            if (changed) draw();
+        });
+
+        document.getElementById('colorInput').addEventListener('input', e => {
+            if (primary >= 0) {
+                vertices[primary].color = hexToRgb(e.target.value);
+                draw();
+            }
+        });
+
+        // Start the application
+        if (!gl) {
+            alert('WebGL not supported');
+        } else {
+            draw();
+        }
+    </script>
+    <script src="editor-api.js"></script>
+</body>
+</html>
