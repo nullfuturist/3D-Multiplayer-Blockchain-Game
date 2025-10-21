@@ -15,3 +15,5 @@ To be extended and improved.
 <img src="screen5.jpg" width="420"/>
 
 <img src="screen6.jpg" width="420"/>
+Two players looking at each other in overworld and within a 3d scene. The simple player model
+among many other things to be replaced with further development.
